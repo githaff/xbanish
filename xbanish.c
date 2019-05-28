@@ -76,7 +76,7 @@ main(int argc, char *argv[])
 		{"mod4", Mod4Mask}, {"mod5", Mod5Mask}
 	};
 
-	while ((ch = getopt(argc, argv, "di:")) != -1)
+	while ((ch = getopt(argc, argv, "hdi:")) != -1)
 		switch (ch) {
 		case 'd':
 			debug = 1;
@@ -88,6 +88,7 @@ main(int argc, char *argv[])
 					ignored |= mods[i].mask;
 
 			break;
+		case 'h':
 		default:
 			usage();
 		}
