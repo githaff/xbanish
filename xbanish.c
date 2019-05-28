@@ -59,6 +59,9 @@ static Display *dpy;
 static int debug = 0, hiding = 0, legacy = 0;
 static unsigned char ignored;
 
+static char *banish_cmd;
+static char *reveal_cmd;
+
 int
 main(int argc, char *argv[])
 {
@@ -76,7 +79,7 @@ main(int argc, char *argv[])
 		{"mod4", Mod4Mask}, {"mod5", Mod5Mask}
 	};
 
-	while ((ch = getopt(argc, argv, "hdi:")) != -1)
+	while ((ch = getopt(argc, argv, "hdi:b:r:")) != -1)
 		switch (ch) {
 		case 'd':
 			debug = 1;
@@ -87,6 +90,12 @@ main(int argc, char *argv[])
 				if (strcasecmp(optarg, mods[i].name) == 0)
 					ignored |= mods[i].mask;
 
+			break;
+		case 'b':
+			banish_cmd = optarg;
+			break;
+		case 'r':
+			reveal_cmd = optarg;
 			break;
 		case 'h':
 		default:
@@ -222,7 +231,11 @@ hide_cursor(void)
 	if (!hiding) {
 		XFixesHideCursor(dpy, DefaultRootWindow(dpy));
 		hiding = 1;
+
+		if (banish_cmd)
+			system(banish_cmd);
 	}
+
 }
 
 void
@@ -235,6 +248,9 @@ show_cursor(void)
 	if (hiding) {
 		XFixesShowCursor(dpy, DefaultRootWindow(dpy));
 		hiding = 0;
+
+		if (reveal_cmd)
+			system(reveal_cmd);
 	}
 }
 
