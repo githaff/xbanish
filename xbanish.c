@@ -98,8 +98,11 @@ main(int argc, char *argv[])
 			reveal_cmd = optarg;
 			break;
 		case 'h':
+			usage();
+			return 0;
 		default:
 			usage();
+			return 1;
 		}
 
 	argc -= optind;
@@ -403,8 +406,15 @@ done:
 void
 usage(void)
 {
-	fprintf(stderr, "usage: %s [-d] [-i mod]\n", __progname);
-	exit(1);
+	printf("Usage: %s [OPTION]...\n", __progname);
+	printf("Mange cursor visibility depending on keyboard/mouse\n");
+	printf("\n");
+	printf("Options:\n");
+	printf("  -d       run in debug mode\n");
+	printf("  -h       show this help\n");
+	printf("  -i MOD   ignore MOD keys\n");
+	printf("  -b CMD   shell command to be executed on cursor banish\n");
+	printf("  -r CMD   shell command to be executed on cursor reveal\n");
 }
 
 int
