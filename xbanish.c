@@ -39,6 +39,8 @@
 #include <X11/extensions/XInput.h>
 #include <X11/extensions/XInput2.h>
 
+#define ARR_SIZE(arr) (sizeof(arr)/sizeof(arr[0]))
+
 void hide_cursor(void);
 void show_cursor(void);
 int snoop_xinput(Window);
@@ -61,6 +63,9 @@ static unsigned char ignored;
 
 static char *banish_cmd;
 static char *reveal_cmd;
+
+static int mod_keycodes[] = { 50, 64, 66, 105, 108, 133, 148 };
+
 
 int
 main(int argc, char *argv[])
@@ -145,6 +150,7 @@ main(int argc, char *argv[])
 		case KeyRelease:
 			if (ignored) {
 				unsigned int state = 0;
+				unsigned int keycode = 0;
 
 				/* masks are only set on key release, if
 				 * ignore is set we must throw out non-release
@@ -159,17 +165,28 @@ main(int argc, char *argv[])
 					XDeviceKeyEvent *key =
 					    (XDeviceKeyEvent *) &e;
 					state = key->state;
+					keycode = key->keycode;
 				} else if (e.type == KeyRelease) {
 					/* legacy event */
 					state = e.xkey.state;
+					keycode = e.xkey.keycode;
 				}
 
 				if (state & ignored) {
-					if (debug) {
-						printf("ignoring key %d\n",
-						    state);
+					char key_is_mod = 0;
+					for (i = 0; i < ARR_SIZE(mod_keycodes); i++) {
+						if (keycode == mod_keycodes[i]) {
+							key_is_mod = 1;
+						}
 					}
-					break;
+
+					if (key_is_mod) {
+						if (debug) {
+							printf("ignoring key %d\n",
+								state);
+						}
+						break;
+					}
 				}
 			}
 
