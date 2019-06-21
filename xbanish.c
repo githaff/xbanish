@@ -74,7 +74,7 @@ main(int argc, char *argv[])
 	XEvent e;
 	XGenericEventCookie *cookie;
 
-	while ((ch = getopt(argc, argv, "hdi:b:r:")) != -1)
+	while ((ch = getopt(argc, argv, "hdb:r:")) != -1)
 		switch (ch) {
 		case 'd':
 			debug = 1;
