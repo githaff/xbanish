@@ -59,11 +59,11 @@ extern char *__progname;
 
 static Display *dpy;
 static int debug = 0, hiding = 0, legacy = 0;
-static unsigned char ignored;
 
 static char *banish_cmd;
 static char *reveal_cmd;
 
+/* Ignore all mod key press events regardless of ignore flag */
 static int mod_keycodes[] = { 50, 64, 66, 105, 108, 133, 148 };
 
 
@@ -74,27 +74,10 @@ main(int argc, char *argv[])
 	XEvent e;
 	XGenericEventCookie *cookie;
 
-	struct mod_lookup {
-		char *name;
-		int mask;
-	} mods[] = {
-		{"shift", ShiftMask}, {"lock", LockMask},
-		{"control", ControlMask}, {"mod1", Mod1Mask},
-		{"mod2", Mod2Mask}, {"mod3", Mod3Mask},
-		{"mod4", Mod4Mask}, {"mod5", Mod5Mask}
-	};
-
 	while ((ch = getopt(argc, argv, "hdi:b:r:")) != -1)
 		switch (ch) {
 		case 'd':
 			debug = 1;
-			break;
-		case 'i':
-			for (i = 0;
-			    i < sizeof(mods) / sizeof(struct mod_lookup); i++)
-				if (strcasecmp(optarg, mods[i].name) == 0)
-					ignored |= mods[i].mask;
-
 			break;
 		case 'b':
 			banish_cmd = optarg;
@@ -133,6 +116,10 @@ main(int argc, char *argv[])
 	}
 
 	for (;;) {
+		unsigned int state;
+		unsigned int keycode;
+		char key_is_mod;
+
 		cookie = &e.xcookie;
 		XNextEvent(dpy, &e);
 
@@ -141,53 +128,48 @@ main(int argc, char *argv[])
 			etype = MotionNotify;
 		else if (e.type == key_press_type ||
 		    e.type == key_release_type)
-			etype = KeyRelease;
+			etype = KeyPress;
 		else if (e.type == button_press_type ||
 		    e.type == button_release_type)
 			etype = ButtonRelease;
 
 		switch (etype) {
-		case KeyRelease:
-			if (ignored) {
-				unsigned int state = 0;
-				unsigned int keycode = 0;
+		case KeyPress:
+			state = 0;
+			keycode = 0;
 
-				/* masks are only set on key release, if
-				 * ignore is set we must throw out non-release
-				 * events here */
-				if (e.type == key_press_type) {
-					break;
+			/* masks are only set on key release, if
+			 * ignore is set we must throw out non-release
+			 * events here */
+			if (e.type == key_release_type) {
+				break;
+			}
+
+			/* extract modifier state */
+			if (e.type == key_press_type) {
+				/* xinput device event */
+				XDeviceKeyEvent *key =
+				    (XDeviceKeyEvent *) &e;
+				state = key->state;
+				keycode = key->keycode;
+			} else if (e.type == KeyPress) {
+				/* legacy event */
+				state = e.xkey.state;
+				keycode = e.xkey.keycode;
+			}
+
+			key_is_mod = 0;
+			for (i = 0; i < ARR_SIZE(mod_keycodes); i++) {
+				if (keycode == mod_keycodes[i]) {
+					key_is_mod = 1;
 				}
+			}
 
-				/* extract modifier state */
-				if (e.type == key_release_type) {
-					/* xinput device event */
-					XDeviceKeyEvent *key =
-					    (XDeviceKeyEvent *) &e;
-					state = key->state;
-					keycode = key->keycode;
-				} else if (e.type == KeyRelease) {
-					/* legacy event */
-					state = e.xkey.state;
-					keycode = e.xkey.keycode;
+			if (key_is_mod) {
+				if (debug) {
+					printf("ignoring key %d\n", state);
 				}
-
-				if (state & ignored) {
-					char key_is_mod = 0;
-					for (i = 0; i < ARR_SIZE(mod_keycodes); i++) {
-						if (keycode == mod_keycodes[i]) {
-							key_is_mod = 1;
-						}
-					}
-
-					if (key_is_mod) {
-						if (debug) {
-							printf("ignoring key %d\n",
-								state);
-						}
-						break;
-					}
-				}
+				break;
 			}
 
 			hide_cursor();
@@ -429,7 +411,6 @@ usage(void)
 	printf("Options:\n");
 	printf("  -d       run in debug mode\n");
 	printf("  -h       show this help\n");
-	printf("  -i MOD   ignore MOD keys\n");
 	printf("  -b CMD   shell command to be executed on cursor banish\n");
 	printf("  -r CMD   shell command to be executed on cursor reveal\n");
 }
